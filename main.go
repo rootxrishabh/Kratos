@@ -1,19 +1,14 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"time"
 
-	"github.com/rootxrishabh/DynamicClient/pkg/rishabh.dev/v1alpha1"
 	"github.com/rootxrishabh/dynamic-client/controller"
-	"github.com/rootxrishabh/dynamic-client/pkg/apis/rishabh.dev/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -35,10 +30,11 @@ func main() {
 		fmt.Printf("error %s, getting dyn client\n", err.Error())
 	}
 
+	staticClient, err := kubernetes.NewForConfig(config)
+
 	infFactory := dynamicinformer.NewDynamicSharedInformerFactory(dynClient, 10*time.Minute)
 
-	c := controller.NewController(dynClient, infFactory)
+	c := controller.NewController(dynClient, infFactory, staticClient)
 	infFactory.Start(make(<-chan struct{}))
-	c.run(make(<-chan struct{}))
-	fmt.Printf("the concrete type that we got is %+v\n", k)
+	c.Run(make(<-chan struct{}))
 }

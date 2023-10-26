@@ -5,29 +5,30 @@ import (
 	"strings"
 
 	"github.com/digitalocean/godo"
+	"github.com/emicklei/go-restful/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-
-	"github.com/rootxrishabh/dynamic-client/pkg/apis/rishabh.dev/v1alpha1"
 )
 
-func Create(c kubernetes.Interface, spec v1alpha1.KlusterSpec) (string, error) {
-	token, err := getToken(c, spec.TokenSecret)
+func Create(c kubernetes.Interface, spec map[string]interface{}) (string, error) {
+	token, err := getToken(c, spec["tokenSecret"].(string))
 	if err != nil {
 		return "", err
 	}
-
+	log.Printf("token from cloud file %s", token)
 	client := godo.NewFromToken(token)
+	nodePools := spec["nodePools"].([]interface{})
+	nodePool := nodePools[0].(map[string]interface{})
 
 	request := &godo.KubernetesClusterCreateRequest{
-		Name:        spec.Name,
-		RegionSlug:  spec.Region,
-		VersionSlug: spec.Version,
+		Name:        spec["name"].(string),
+		RegionSlug:  spec["region"].(string),
+		VersionSlug: spec["version"].(string),
 		NodePools: []*godo.KubernetesNodePoolCreateRequest{
 			&godo.KubernetesNodePoolCreateRequest{
-				Size:  spec.NodePools[0].Size,
-				Name:  spec.NodePools[0].Name,
-				Count: spec.NodePools[0].Count,
+				Size:  nodePool["size"].(string),
+				Name:  nodePool["name"].(string),
+				Count: nodePool["count"].(int),
 			},
 		},
 	}
@@ -40,8 +41,8 @@ func Create(c kubernetes.Interface, spec v1alpha1.KlusterSpec) (string, error) {
 	return cluster.ID, nil
 }
 
-func ClusterState(c kubernetes.Interface, spec v1alpha1.KlusterSpec, id string) (string, error) {
-	token, err := getToken(c, spec.TokenSecret)
+func ClusterState(c kubernetes.Interface, spec map[string]interface{}, id string) (string, error) {
+	token, err := getToken(c, spec["tokenSecret"].(string))
 	if err != nil {
 		return "", err
 	}

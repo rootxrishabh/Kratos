@@ -37,4 +37,5 @@ func main() {
 	c := controller.NewController(dynClient, infFactory, staticClient)
 	infFactory.Start(make(<-chan struct{}))
 	c.Run(make(<-chan struct{}))
+	
 }

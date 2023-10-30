@@ -1,0 +1,54 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: kratoses.rishabh.dev
+spec:
+  group: rishabh.dev
+  names:
+    kind: Kratos
+    listKind: KratosList
+    plural: kratoses
+    singular: kratos
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              name:
+                type: string
+              nodePools:
+                items:
+                  properties:
+                    count:
+                      type: string
+                    name:
+                      type: string
+                    size:
+                      type: string
+                  type: object
+                type: array
+              region:
+                type: string
+              tokenSecret:
+                type: string
+              version:
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

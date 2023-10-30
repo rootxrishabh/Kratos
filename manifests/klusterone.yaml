@@ -1,15 +1,13 @@
-apiVersion: viveksingh.dev/v1alpha1
-kind: Kluster
+apiVersion: rishabh.dev/v1alpha1
+kind: Kratos
 metadata:
-  name: kluster-0
-  finalizers:
-  - "viveksingh.dev/prod-protection"
+  name: kratos-0
 spec:
-  name: kluster-0
+  name: kratos-0
   region: "nyc1"
-  version: "1.21.3-do.0"
+  version: "1.28.2-do.0"
   tokenSecret: "default/dosecret"
   nodePools:
-    - count: 3
+    - count: "3"
       name: "dummy-nodepool"
       size: "s-2vcpu-2gb"

@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/kanisterio/kanister/pkg/poll"
 	do "github.com/rootxrishabh/dynamic-client/cloud"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -13,18 +14,16 @@ import (
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	// "github.com/kanisterio/kanister/pkg/poll"
 
-	// "k8s.io/client-go/tools/record"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/workqueue"
 )
 
 var cloudResource = schema.GroupVersionResource{
-	Group:    "viveksingh.dev",
+	Group:    "rishabh.dev",
 	Version:  "v1alpha1",
-	Resource: "klusters",
+	Resource: "kratoses",
 }
 
 type contrller struct {
@@ -33,7 +32,6 @@ type contrller struct {
 	stopper       chan struct{}
 	queue         workqueue.RateLimitingInterface
 	staticClient  kubernetes.Interface
-	// recorder      record.EventRecorder
 }
 
 func NewController(dynamicClient dynamic.Interface, dynInformer dynamicinformer.DynamicSharedInformerFactory, staticClient kubernetes.Interface) *contrller {
@@ -45,27 +43,17 @@ func NewController(dynamicClient dynamic.Interface, dynInformer dynamicinformer.
 		stopper:       make(chan struct{}),
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Kratos"),
 		staticClient:  staticClient,
-		// to be fixed
-		// recorder: record.NewBroadcaster().NewRecorder(client.Config(), corev1.EventSource{Component: "Kratos"}),
 	}
-
-	// informer.AddEventHandler(
-	// 	cache.ResourceEventHandlerFuncs{
-	// 		// AddFunc:    c.handleAdd,
-	// 		// DeleteFunc: c.handleDel,
-	// 		// UpdateFunc: c.handleUpdate,
-
-	// 	},
-	// )
 
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
-			AddFunc: c.handleAdd,
+			AddFunc:    c.handleAdd,
+			DeleteFunc: c.handleDel,
+			// UpdateFunc: c.handleUpdate,
 		},
 	)
 
 	return c
-
 }
 
 func (c *contrller) Run(ch <-chan struct{}) {
@@ -98,7 +86,6 @@ func (c *contrller) processItem() bool {
 		log.Printf("error %s calling Namespace key func on cache for item", err.Error())
 		return false
 	}
-
 	ns, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		log.Printf("splitting key into namespace and name, error %s\n", err.Error())
@@ -108,90 +95,63 @@ func (c *contrller) processItem() bool {
 	kratos, err := c.dynamicClient.Resource(cloudResource).Namespace(ns).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return deleteDOCluster()
+			_, err := do.DeleteCluster(c.staticClient, name)
+			if err != nil {
+				log.Printf("error %s, deleting the cluster", err.Error())
+				return false
+			} else {
+				return true
+				}
+			}
+			log.Printf("error %s, Getting the kluster resource from lister", err.Error())
+			return false
 		}
-		log.Printf("error %s, Getting the kluster resource from lister", err.Error())
+
+		spec := kratos.Object["spec"].(map[string]interface{})
+		clusterID, err := do.Create(c.staticClient, spec)
+		if err != nil {
+			log.Printf("error %s, creating the cluster", err.Error())
+		}
+		
+		if clusterID == "" {
+		log.Printf("clusterID is nil, cluster creation failed as clusters are already created")
 		return false
+		} else {
+		// Getting cluster state to wait for cluster to be running
+		err = c.waitForCluster(spec, clusterID)
+		if err != nil {
+			log.Printf("error %s, waiting for cluster to be running or cluster already exists", err.Error())
+		}
 	}
-	log.Println("kratos spec", kratos.Object["spec"])
-	spec := kratos.Object["spec"].(map[string]interface{})
-
-
-	clusterID, err := do.Create(c.staticClient, spec)
-	if err != nil {
-		// do something
-		log.Printf("error %s, creating the cluster", err.Error())
-	}
-
-	// c.recorder.Event(kluster, corev1.EventTypeNormal, "ClusterCreation", "DO API was called to create the cluster")
-
-	log.Printf("cluster id that we have is %s\n", clusterID)
-
-	// err = c.updateStatus(clusterID, "creating", spec)
-	// if err != nil {
-	// 	log.Printf("error %s, updating status of the kluster %s\n", err.Error(), spec["name"])
-	// }
-
-	// // query DO API to make sure clsuter' state is running
-	// err = c.waitForCluster(spec, clusterID)
-	// if err != nil {
-	// 	log.Printf("error %s, waiting for cluster to be running", err.Error())
-	// }
-
-	// err = c.updateStatus(clusterID, "running", spec)
-	// if err != nil {
-	// 	log.Printf("error %s updaring cluster status after waiting for cluster", err.Error())
-	// }
-
-	// c.recorder.Event(kluster, corev1.EventTypeNormal, "ClusterCreationCompleted", "DO Cluster creation was completed")
 	return true
 }
 
-func deleteDOCluster() bool {
-	// this actualy deletes the cluster from the DO
-	log.Println("Cluster was deleted succcessfully")
-	return true
+func (c *contrller) waitForCluster(spec map[string]interface{}, clusterID string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
+	return poll.Wait(ctx, func(ctx context.Context) (bool, error) {
+		state, err := do.ClusterState(c.staticClient, spec, clusterID)
+		if err != nil {
+			return false, err
+		}
+		if state == "running" {
+			return true, nil
+		}
+
+		return false, nil
+	})
 }
-
-// func (c *contrller) waitForCluster(spec map[string]interface{}, clusterID string) error {
-// 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-// 	defer cancel()
-
-// 	return poll.Wait(ctx, func(ctx context.Context) (bool, error) {
-// 		state, err := do.ClusterState(c.staticClient, spec, clusterID)
-// 		if err != nil {
-// 			return false, err
-// 		}
-// 		if state == "running" {
-// 			return true, nil
-// 		}
-
-// 		return false, nil
-// 	})
-// }
-
-// func (c *contrller) updateStatus(id, progress string, spec map[string]interface{}) error {
-// 	// get the latest version of kluster
-// 	k, err := c.klient.ViveksinghV1alpha1().Klusters(kluster.Namespace).Get(context.Background(), kluster.Name, metav1.GetOptions{})
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	k.Status.KlusterID = id
-// 	k.Status.Progress = progress
-// 	_, err = c.klient.ViveksinghV1alpha1().Klusters(kluster.Namespace).UpdateStatus(context.Background(), k, metav1.UpdateOptions{})
-// 	return err
-// }
 
 func (c *contrller) handleAdd(obj interface{}) {
 	log.Println("handleAdd was called")
 	c.queue.Add(obj)
 }
 
-// func (c *contrller) handleDel(obj interface{}) {
-// 	log.Println("handleDel was called")
-// 	c.queue.Add(obj)
-// }
+func (c *contrller) handleDel(obj interface{}) {
+	log.Println("handleDelete was called")
+	c.queue.Add(obj)
+}
 
 // func (c *contrller) handleUpdate(ondObj, newObj interface{}) {
 // 	// get the kluster resource

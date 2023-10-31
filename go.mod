@@ -1,10 +1,10 @@
 module github.com/rootxrishabh/dynamic-client
 
-go 1.23
+go 1.21.3
 
 require (
 	github.com/digitalocean/godo v1.105.0
-	github.com/emicklei/go-restful v2.16.0+incompatible
+	github.com/kanisterio/kanister v0.0.0-20231027101044-3e93315e9c8c
 	k8s.io/apimachinery v0.28.3
 	k8s.io/client-go v0.28.3
 )
@@ -30,7 +30,6 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/kanisterio/kanister v0.0.0-20231027101044-3e93315e9c8c // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect

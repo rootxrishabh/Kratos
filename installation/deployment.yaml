@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: kratos
+  name: kratos
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kratos
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: kratos
+    spec:
+      containers:
+      - image: rootxrishabh/kratos:0.2.0
+        name: kratos
+        resources: {}
+      serviceAccountName: kratos-sa
+status: {}

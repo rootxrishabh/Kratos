@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  creationTimestamp: null
+  name: kratos-secret-reader-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kratos-secret-reader
+subjects:
+- kind: ServiceAccount
+  name: kratos-sa
+  namespace: default

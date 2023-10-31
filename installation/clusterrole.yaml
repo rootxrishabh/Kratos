@@ -1,0 +1,28 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: kratos-cr
+rules:
+- apiGroups:
+  - rishabh.dev
+  resources:
+  - kratoses
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  - namespaces
+  verbs:
+  - create
+  - get
+- apiGroups:
+  - rishabh.dev
+  resources:
+  - kratoses
+  verbs:
+  - get
+  - update

@@ -49,7 +49,6 @@ func NewController(dynamicClient dynamic.Interface, dynInformer dynamicinformer.
 		cache.ResourceEventHandlerFuncs{
 			AddFunc:    c.handleAdd,
 			DeleteFunc: c.handleDel,
-			// UpdateFunc: c.handleUpdate,
 		},
 	)
 
@@ -152,39 +151,3 @@ func (c *contrller) handleDel(obj interface{}) {
 	log.Println("handleDelete was called")
 	c.queue.Add(obj)
 }
-
-// func (c *contrller) handleUpdate(ondObj, newObj interface{}) {
-// 	// get the kluster resource
-// 	kluster, ok := newObj.(*v1alpha1.Kluster)
-// 	if !ok {
-// 		log.Printf("can not convert newObj to kluster resource\n")
-// 		return
-// 	}
-// 	ctx := context.Background()
-// 	// if the finalizer is set or not
-// 	// check if the cluster has prod namespace
-// 	_, err := c.staticClient.CoreV1().Namespaces().Get(ctx, protectedNS, metav1.GetOptions{}) // this would requrie role change to be able to get ns
-// 	if err == nil {
-// 		// prod ns is available, do nothing
-// 		return
-// 	}
-// 	// if it has, do nothing
-// 	// otherwise, remove finalizer `viveksingh.dev/prod-protection` from resource
-// 	// if we are here, there is an err set, to be explicit you can check this says resource not found
-// 	k := kluster.DeepCopy()
-// 	finals := []string{}
-// 	for _, f := range k.Finalizers {
-// 		if f == klusterFinalizer {
-// 			continue
-// 		}
-// 		finals = append(finals, f)
-// 	}
-// 	k.Finalizers = finals
-
-// 	// change role to be able to update the kluster resource
-// 	if _, err = c.klient.ViveksinghV1alpha1().Klusters(k.Namespace).Update(ctx, k, metav1.UpdateOptions{}); err != nil {
-// 		log.Printf("Update of the kluster resource failed: %s\n", err.Error())
-// 		return
-// 	}
-// 	log.Println("Finalizer was removed from the resource")
-// }

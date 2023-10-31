@@ -1,6 +1,6 @@
 module github.com/rootxrishabh/dynamic-client
 
-go 1.21.3
+go 1.23
 
 require (
 	github.com/digitalocean/godo v1.105.0
